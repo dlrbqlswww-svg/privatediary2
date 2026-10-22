@@ -10,7 +10,7 @@
   <style>
     :root {
       --safe-top: max(64px, env(safe-area-inset-top, 64px));
-      --safe-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+      --safe-bottom: max(8px, env(safe-area-inset-bottom, 0px));
       --app-width: 393px;
       --bg-body: #eceef2;
       --bg-app: #f8f9fa;
@@ -49,10 +49,12 @@
 
     /* App Shell Container */
     .app-shell {
-      position: relative;
+      position: fixed;
+      inset: 0;
       width: 100%;
       max-width: 430px;
-      height: 100dvh;
+      height: auto;
+      min-height: 0;
       margin: 0 auto;
       background-color: var(--bg-app);
       display: flex;
@@ -68,6 +70,8 @@
         justify-content: center;
       }
       .app-shell {
+        position: relative;
+        inset: auto;
         width: 393px;
         height: min(852px, 96dvh);
         border-radius: 46px;
@@ -515,7 +519,7 @@
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       border-top: 1px solid var(--border-color);
-      padding: 10px 18px var(--safe-bottom);
+      padding: 10px 18px max(8px, env(safe-area-inset-bottom, 0px));
       display: flex;
       align-items: center;
       justify-content: space-between;

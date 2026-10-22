@@ -1,0 +1,2917 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="비밀갤러리" />
+  <title>비밀블라인드 · 마이갤러리 (Offline Personal Community Diary)</title>
+  <style>
+    /* ==========================================================================
+       1. CSS VARIABLES & THEME TOKENS (100% Offline, Zero External Dependencies)
+       ========================================================================== */
+    :root {
+      /* iPhone 14 Pro Safe Areas (Dynamic Island = ~54px top, Home Indicator = ~34px bottom) */
+      --safe-top: max(56px, env(safe-area-inset-top, 56px));
+      --safe-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+      --app-width: 393px;
+
+      /* Light Theme Defaults */
+      --bg-body: #e5e7eb;
+      --bg-app: #f4f5f7;
+      --bg-surface: #ffffff;
+      --bg-elevated: #f9fafb;
+      --bg-glass: rgba(255, 255, 255, 0.88);
+      --text-primary: #111827;
+      --text-secondary: #4b5563;
+      --text-muted: #9ca3af;
+      --border-color: #e5e7eb;
+      --border-subtle: #f3f4f6;
+      --accent-primary: #ef4444; /* Blind Red + Insta Rose */
+      --accent-secondary: #3b82f6; /* DC Blue */
+      --accent-gold: #f59e0b; /* Concept Post Star */
+      --accent-green: #10b981;
+      --pill-bg: #f3f4f6;
+      --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.04);
+      --shadow-modal: 0 -8px 30px rgba(0, 0, 0, 0.14);
+    }
+
+    [data-theme="dark"] {
+      --bg-body: #050507;
+      --bg-app: #0d0e12;
+      --bg-surface: #16181f;
+      --bg-elevated: #1f222d;
+      --bg-glass: rgba(22, 24, 31, 0.90);
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --border-color: #262936;
+      --border-subtle: #1d202a;
+      --accent-primary: #ff4757;
+      --accent-secondary: #5352ed;
+      --accent-gold: #fbbf24;
+      --accent-green: #2ed573;
+      --pill-bg: #232734;
+      --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
+      --shadow-modal: 0 -10px 40px rgba(0, 0, 0, 0.65);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-body);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ==========================================================================
+       2. IPHONE 14 PRO VIEWPORT CONTAINER & DYNAMIC ISLAND GUARD
+       ========================================================================== */
+    .app-shell {
+      position: relative;
+      width: 100%;
+      max-width: 430px;
+      height: 100dvh;
+      margin: 0 auto;
+      background-color: var(--bg-app);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    }
+
+    @media (min-width: 440px) {
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .app-shell {
+        width: 393px;
+        height: min(852px, 96dvh);
+        border-radius: 48px;
+        border: 8px solid #27272a;
+      }
+    }
+
+    /* Top Dynamic Island Safe Zone Guard */
+    .dynamic-island-zone {
+      flex-shrink: 0;
+      height: var(--safe-top);
+      width: 100%;
+      background-color: var(--bg-surface);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 11px;
+      z-index: 100;
+      position: relative;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* Visual Dynamic Island Pill (doubles as offline security status badge) */
+    .dynamic-island-pill {
+      width: 124px;
+      height: 35px;
+      background: #000000;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      box-shadow: 0 1px 4px rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.25s ease;
+    }
+
+    .dynamic-island-pill:active {
+      transform: scale(0.95);
+    }
+
+    .island-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+
+    .island-camera {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #25335a 0%, #090d16 60%, #000 100%);
+      border: 1px solid #1e293b;
+    }
+
+    /* ==========================================================================
+       3. TOP COMMUNITY HEADER & CATEGORY BAR
+       ========================================================================== */
+    .app-header {
+      flex-shrink: 0;
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 30;
+    }
+
+    .header-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px 8px;
+    }
+
+    .brand-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, var(--accent-primary), #ff6b81);
+      color: #fff;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 6px;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      background: var(--pill-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.92);
+    }
+
+    .icon-btn.active {
+      background: var(--accent-primary);
+      color: #fff;
+      border-color: var(--accent-primary);
+    }
+
+    /* Search Bar Drawer */
+    .search-drawer {
+      display: none;
+      padding: 4px 16px 10px;
+    }
+
+    .search-drawer.open {
+      display: block;
+    }
+
+    .search-input-wrap {
+      display: flex;
+      align-items: center;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 7px 12px;
+      gap: 8px;
+    }
+
+    .search-input-wrap input {
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 14px;
+      width: 100%;
+      outline: none;
+    }
+
+    /* Category Scroll Tabs */
+    .category-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 6px 16px 10px;
+      scrollbar-width: none;
+    }
+
+    .category-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-tab {
+      flex-shrink: 0;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      background: var(--pill-bg);
+      color: var(--text-secondary);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .cat-tab.active {
+      background: var(--text-primary);
+      color: var(--bg-surface);
+    }
+
+    /* ==========================================================================
+       4. MAIN SCROLLABLE FEED (INSTAGRAM CARD VIEW + DC/BLIND COMPACT VIEW)
+       ========================================================================== */
+    .feed-scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 24px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Stats Sub-banner */
+    .board-status-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-app);
+    }
+
+    .status-offline-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    /* Instagram + Blind Hybrid Feed Card */
+    .feed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .post-card {
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--shadow-card);
+      transition: background 0.15s ease;
+    }
+
+    /* Card Top Meta (Blind/DC Inside Header) */
+    .card-meta-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px 10px;
+    }
+
+    .author-profile {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .avatar-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #ec4899);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .author-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .author-top-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cat-mini-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--pill-bg);
+      color: var(--accent-primary);
+    }
+
+    .concept-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(245, 158, 11, 0.16);
+      color: var(--accent-gold);
+    }
+
+    .author-nickname {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .author-sub-line {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Instagram-Style Prominent Photo Carousel */
+    .insta-media-box {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 4.3;
+      background: #090a0f;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .insta-media-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .carousel-counter {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.68);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      backdrop-filter: blur(4px);
+      z-index: 5;
+    }
+
+    .carousel-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 6;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .carousel-nav-btn.prev { left: 10px; }
+    .carousel-nav-btn.next { right: 10px; }
+
+    .carousel-dots {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 5px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 5;
+    }
+
+    .carousel-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    .carousel-dot.active {
+      background: #fff;
+      transform: scale(1.2);
+    }
+
+    /* Double-tap heart burst animation */
+    .heart-burst {
+      position: absolute;
+      font-size: 72px;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.3);
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 10;
+      filter: drop-shadow(0 6px 16px rgba(0,0,0,0.5));
+    }
+
+    .heart-burst.show {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    /* Card Content Body */
+    .card-body-clickable {
+      padding: 12px 14px 10px;
+      cursor: pointer;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.38;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+
+    .card-excerpt {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: pre-line;
+    }
+
+    /* Card Bottom Action Bar (Instagram + DC Inside Reaction Bar) */
+    .card-reaction-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px 12px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .reaction-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .react-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 8px;
+      transition: transform 0.12s ease;
+    }
+
+    .react-btn:active {
+      transform: scale(0.9);
+    }
+
+    .react-btn.liked {
+      color: var(--accent-primary);
+    }
+
+    .react-btn.starred {
+      color: var(--accent-gold);
+    }
+
+    /* Compact List View Mode (DC Inside / Blind Table Mode) */
+    .feed-list.compact-mode {
+      gap: 0;
+    }
+
+    .compact-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 15px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .compact-row:active {
+      background: var(--bg-elevated);
+    }
+
+    .compact-left {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .compact-title-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+
+    .compact-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .compact-comment-cnt {
+      color: var(--accent-primary);
+      font-size: 12px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .compact-meta {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .compact-thumb {
+      width: 54px;
+      height: 54px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+    }
+
+    /* ==========================================================================
+       5. BOTTOM THUMB-ZONE NAVIGATION BAR (Ergonomic for iPhone 14 Pro)
+       ========================================================================== */
+    .bottom-nav {
+      flex-shrink: 0;
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border-color);
+      padding: 8px 14px var(--safe-bottom);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      z-index: 40;
+    }
+
+    .nav-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 10.5px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 10px;
+    }
+
+    .nav-tab-btn.active {
+      color: var(--text-primary);
+    }
+
+    .nav-write-cta {
+      background: linear-gradient(135deg, var(--accent-primary), #ff6b81);
+      color: #fff;
+      border: none;
+      height: 42px;
+      padding: 0 20px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    .nav-write-cta:active {
+      transform: scale(0.94);
+    }
+
+    /* ==========================================================================
+       6. FULLSCREEN OVERLAYS (DETAIL VIEW, BLOG BLOCK EDITOR, PRIVACY MODAL)
+       All modals respect --safe-top (Dynamic Island) & put actions at --safe-bottom!
+       ========================================================================== */
+    .screen-modal {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-app);
+      z-index: 80;
+      display: none;
+      flex-direction: column;
+      padding-top: var(--safe-top);
+      animation: slideUp 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .screen-modal.open {
+      display: flex;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0.6; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Modal Top Title Bar (Purely informational, NO critical buttons near Dynamic Island) */
+    .modal-info-header {
+      flex-shrink: 0;
+      padding: 12px 16px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-info-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .modal-info-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .modal-scroll-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 30px;
+    }
+
+    /* CRITICAL: Bottom Action Dock for Editor & Detail Views */
+    .bottom-action-dock {
+      flex-shrink: 0;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border-color);
+      padding: 10px 12px var(--safe-bottom);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      box-shadow: var(--shadow-modal);
+      z-index: 90;
+    }
+
+    .dock-btn {
+      height: 44px;
+      padding: 0 14px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      font-weight: 800;
+      border: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .dock-btn:active {
+      transform: scale(0.95);
+    }
+
+    .dock-btn.primary {
+      background: var(--accent-primary);
+      color: #fff;
+      border-color: var(--accent-primary);
+      flex: 1;
+    }
+
+    .dock-btn.secondary-accent {
+      background: rgba(59, 130, 246, 0.14);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .dock-btn.danger {
+      color: #f87171;
+      border-color: rgba(248, 113, 113, 0.25);
+    }
+
+    /* ==========================================================================
+       7. BLOG-STYLE INTERLEAVED BLOCK EDITOR (TEXT + PHOTO BLOCKS)
+       ========================================================================== */
+    .editor-meta-section {
+      background: var(--bg-surface);
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .editor-row-split {
+      display: flex;
+      gap: 8px;
+    }
+
+    .editor-select, .editor-input {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      outline: none;
+    }
+
+    .editor-title-input {
+      width: 100%;
+      font-size: 17px;
+      font-weight: 800;
+      padding: 12px;
+    }
+
+    .persona-quick-chips {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-top: 2px;
+    }
+
+    .persona-quick-chips::-webkit-scrollbar { display: none; }
+
+    .persona-chip {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--pill-bg);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+    }
+
+    /* Block Container List */
+    .blocks-container {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .editor-block-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .block-card-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 12px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .block-ctrl-btns {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mini-ctrl-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mini-ctrl-btn.del {
+      color: #f87171;
+    }
+
+    .block-textarea {
+      width: 100%;
+      min-height: 110px;
+      border: none;
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      padding: 12px;
+      font-size: 15px;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .block-photo-preview {
+      width: 100%;
+      max-height: 340px;
+      object-fit: contain;
+      background: #090a0f;
+      display: block;
+    }
+
+    .block-caption-input {
+      width: 100%;
+      border: none;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      padding: 10px 12px;
+      font-size: 13px;
+      outline: none;
+      text-align: center;
+    }
+
+    /* ==========================================================================
+       8. POST DETAIL VIEW (BLOG RENDERING + DC/BLIND VOTING + SELF-COMMENTS)
+       ========================================================================== */
+    .detail-article {
+      background: var(--bg-surface);
+      padding: 18px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .detail-cat-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .detail-title {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.35;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      letter-spacing: -0.4px;
+    }
+
+    .detail-author-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 18px;
+    }
+
+    /* Blog-style Interleaved Content Blocks */
+    .detail-blocks-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-bottom: 26px;
+    }
+
+    .detail-text-block {
+      font-size: 15.5px;
+      line-height: 1.72;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .detail-photo-figure {
+      margin: 0 -16px;
+      background: #050507;
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .detail-photo-figure img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .detail-photo-caption {
+      padding: 8px 16px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      text-align: center;
+      background: var(--bg-elevated);
+    }
+
+    /* DC Inside Style Upvote / Concept Star / Downvote Box */
+    .dc-vote-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 16px 0 8px;
+    }
+
+    .vote-circle-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      cursor: pointer;
+      transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .vote-circle-btn:active {
+      transform: scale(0.88);
+    }
+
+    .vote-circle-btn.up {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+
+    .vote-circle-btn.concept.active {
+      border-color: var(--accent-gold);
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-gold);
+    }
+
+    .vote-num {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .vote-label {
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    /* Anonymous Self-Comments Section */
+    .comments-section {
+      padding: 16px;
+      background: var(--bg-app);
+    }
+
+    .comments-header {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .comment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .comment-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 11px 13px;
+    }
+
+    .comment-item.reply {
+      margin-left: 22px;
+      background: var(--bg-elevated);
+      border-left: 3px solid var(--accent-secondary);
+    }
+
+    .comment-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .comment-nick {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .op-badge {
+      font-size: 9.5px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(239, 68, 68, 0.16);
+      color: var(--accent-primary);
+      font-weight: 800;
+    }
+
+    .comment-body {
+      font-size: 13.5px;
+      line-height: 1.48;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+    }
+
+    .comment-Compose-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    /* ==========================================================================
+       9. PRIVACY, PIN LOCK & BACKUP SETTINGS CARDS
+       ========================================================================== */
+    .settings-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px;
+      margin: 12px 16px;
+    }
+
+    .settings-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .settings-card p {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    /* PIN Lock Screen Overlay */
+    .pin-lock-screen {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-app);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 20px);
+    }
+
+    .pin-lock-screen.open {
+      display: flex;
+    }
+
+    .pin-dots {
+      display: flex;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .pin-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+
+    .pin-dot.filled {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      transform: scale(1.15);
+    }
+
+    .pin-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .pin-key {
+      height: 64px;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .pin-key:active {
+      background: var(--accent-primary);
+      color: #fff;
+    }
+
+    /* Custom Toast & Confirm Dialog (No alert/confirm!) */
+    .toast-banner {
+      position: absolute;
+      bottom: calc(var(--safe-bottom) + 74px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(17, 24, 39, 0.94);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      z-index: 300;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .toast-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .dialog-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 250;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px 16px var(--safe-bottom);
+    }
+
+    .dialog-backdrop.open {
+      display: flex;
+    }
+
+    .dialog-sheet {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 22px;
+      padding: 20px 18px;
+      box-shadow: var(--shadow-modal);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================================================
+       IPHONE 14 PRO APP SHELL (393x852 Viewport Optimized)
+       ========================================================================== -->
+  <div class="app-shell" id="appShell">
+
+    <!-- 1. TOP DYNAMIC ISLAND SAFE GUARD ZONE (Prevents any top overlap) -->
+    <div class="dynamic-island-zone">
+      <div class="dynamic-island-pill" id="islandPill" title="오프라인 보안 상태 확인">
+        <span class="island-dot"></span>
+        <span id="islandStatusText">LOCAL ONLY</span>
+        <span class="island-camera"></span>
+      </div>
+    </div>
+
+    <!-- 2. COMMUNITY HEADER & CATEGORY BAR -->
+    <header class="app-header">
+      <div class="header-top-row">
+        <div class="brand-box">
+          <span class="brand-badge">BLIND · DC</span>
+          <div>
+            <div class="brand-title">
+              마이갤러리
+              <span class="brand-sub" id="totalPostCountBadge">(0)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <!-- Search Toggle -->
+          <button class="icon-btn" id="btnToggleSearch" title="검색">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <!-- View Mode Toggle: Instagram Feed vs Compact DC List -->
+          <button class="icon-btn" id="btnToggleViewMode" title="인스타형 / 게시판형 전환">
+            <svg id="iconViewMode" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          </button>
+          <!-- Theme Toggle -->
+          <button class="icon-btn" id="btnToggleTheme" title="다크/라이트 모드">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Collapsible Search Input -->
+      <div class="search-drawer" id="searchDrawer">
+        <div class="search-input-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="내 비밀 일기 제목, 본문, 닉네임 검색..." />
+          <button id="btnClearSearch" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;">지우기</button>
+        </div>
+      </div>
+
+      <!-- Community Category Filter Tabs -->
+      <div class="category-tabs" id="categoryTabs">
+        <button class="cat-tab active" data-cat="ALL">전체글</button>
+        <button class="cat-tab" data-cat="CONCEPT">🌟 개념글</button>
+        <button class="cat-tab" data-cat="일기">일기</button>
+        <button class="cat-tab" data-cat="사진첩">📸 사진첩</button>
+        <button class="cat-tab" data-cat="생각">생각/고민</button>
+        <button class="cat-tab" data-cat="유머">유머/드립</button>
+        <button class="cat-tab" data-cat="비밀">🔒 흑역사/비밀</button>
+      </div>
+    </header>
+
+    <!-- 3. SCROLLABLE INSTAGRAM + COMMUNITY FEED -->
+    <main class="feed-scroll-area" id="feedScrollArea">
+      <div class="board-status-strip">
+        <span class="status-offline-tag">● 외부 서버 연결 없음 (100% 기기 내 저장)</span>
+        <span id="currentViewModeLabel">인스타 카드뷰</span>
+      </div>
+      <div class="feed-list" id="feedListContainer"></div>
+    </main>
+
+    <!-- 4. BOTTOM THUMB-ZONE NAVIGATION BAR -->
+    <nav class="bottom-nav">
+      <button class="nav-tab-btn active" id="navBtnHome">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>전체글</span>
+      </button>
+
+      <button class="nav-tab-btn" id="navBtnConcept">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>개념글</span>
+      </button>
+
+      <!-- Center Prominent Write Button -->
+      <button class="nav-write-cta" id="navBtnWrite">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>글쓰기</span>
+      </button>
+
+      <button class="nav-tab-btn" id="navBtnPhotos">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>사진첩</span>
+      </button>
+
+      <button class="nav-tab-btn" id="navBtnPrivacy">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>보안/백업</span>
+      </button>
+    </nav>
+
+    <!-- ==========================================================================
+         5. POST DETAIL & ANONYMOUS SELF-COMMENT MODAL
+         All action buttons are placed in the bottom dock!
+         ========================================================================== -->
+    <section class="screen-modal" id="detailModal">
+      <div class="modal-info-header">
+        <span class="modal-info-title" id="detailHeaderBoardName">마이갤러리 · 게시물 보기</span>
+        <span class="modal-info-hint">하단 버튼으로 조작</span>
+      </div>
+
+      <div class="modal-scroll-body" id="detailScrollBody">
+        <article class="detail-article" id="detailArticleContainer"></article>
+
+        <!-- Self-Comment Persona Play Area -->
+        <section class="comments-section">
+          <div class="comments-header">
+            <span>💬 익명 자아 댓글놀이 <strong id="detailCommentCount" style="color:var(--accent-primary);">0</strong></span>
+            <span style="font-size:11px;color:var(--text-muted);font-weight:600;">혼자 다중이 댓글 가능</span>
+          </div>
+
+          <div class="comment-list" id="detailCommentList"></div>
+
+          <!-- Comment Compose Box -->
+          <div class="comment-Compose-box">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <input type="text" id="commentNickInput" class="editor-input" style="padding:6px 10px;font-size:12px;width:58%;" value="ㅇㅇ(211.36)" placeholder="댓글 닉네임" />
+              <span id="replyTargetBadge" style="font-size:11px;color:var(--accent-secondary);font-weight:700;display:none;">대댓글 작성중 ✕</span>
+            </div>
+            <div class="persona-quick-chips" style="margin-bottom:8px;" id="commentPersonaChips">
+              <button type="button" class="persona-chip" data-nick="ㅇㅇ(211.36)">ㅇㅇ(211.36)</button>
+              <button type="button" class="persona-chip" data-nick="익명의직장인">익명의직장인</button>
+              <button type="button" class="persona-chip" data-nick="팩트폭격기">팩트폭격기</button>
+              <button type="button" class="persona-chip" data-nick="미래의나">미래의나</button>
+              <button type="button" class="persona-chip" data-nick="따뜻한위로러">따뜻한위로러</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <textarea id="commentTextInput" class="editor-input" style="flex:1;height:58px;resize:none;font-family:inherit;" placeholder="내 일기에 익명 댓글이나 딴지를 걸어보세요..."></textarea>
+              <button type="button" class="dock-btn primary" id="btnSubmitComment" style="flex:0 0 68px;height:58px;">등록</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Bottom Ergonomic Control Bar for Post Detail -->
+      <div class="bottom-action-dock">
+        <button type="button" class="dock-btn" id="btnCloseDetail">
+          ← 목록으로
+        </button>
+        <button type="button" class="dock-btn" id="btnEditCurrentPost">
+          ✏️ 수정
+        </button>
+        <button type="button" class="dock-btn danger" id="btnDeleteCurrentPost">
+          🗑️ 삭제
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         6. BLOG-STYLE BLOCK EDITOR MODAL (Cancel / Photo / Text / Save all at BOTTOM)
+         ========================================================================== -->
+    <section class="screen-modal" id="editorModal">
+      <div class="modal-info-header">
+        <span class="modal-info-title" id="editorModalHeading">새 비밀 게시물 작성</span>
+        <span class="modal-info-hint">글과 사진을 원하는 순서로 배치</span>
+      </div>
+
+      <div class="modal-scroll-body" id="editorScrollBody">
+        <div class="editor-meta-section">
+          <div class="editor-row-split">
+            <select id="editorCategorySelect" class="editor-select" style="width:42%;">
+              <option value="일기">📔 일기</option>
+              <option value="사진첩">📸 사진첩</option>
+              <option value="생각">💭 생각/고민</option>
+              <option value="유머">🤣 유머/드립</option>
+              <option value="비밀">🔒 흑역사/비밀</option>
+            </select>
+            <input type="text" id="editorNicknameInput" class="editor-input" style="width:58%;" value="익명 · 나자신" placeholder="작성자 닉네임" />
+          </div>
+
+          <!-- Fun Quick Nickname Presets -->
+          <div class="persona-quick-chips" id="editorPersonaChips">
+            <button type="button" class="persona-chip" data-nick="익명 · 나자신">익명 · 나자신</button>
+            <button type="button" class="persona-chip" data-nick="ㅇㅇ(127.0)">ㅇㅇ(127.0)</button>
+            <button type="button" class="persona-chip" data-nick="새벽감성러">새벽감성러</button>
+            <button type="button" class="persona-chip" data-nick="본캐점검중">본캐점검중</button>
+            <button type="button" class="persona-chip" data-nick="퇴사꿈나무">퇴사꿈나무</button>
+          </div>
+
+          <input type="text" id="editorTitleInput" class="editor-input editor-title-input" placeholder="제목을 입력하세요 (예: 오늘자 솔직한 일기.jpg)" />
+        </div>
+
+        <!-- Dynamic Interleaved Blog Blocks Container -->
+        <div class="blocks-container" id="editorBlocksContainer"></div>
+      </div>
+
+      <!-- Hidden File Input for Multiple Photos -->
+      <input type="file" id="hiddenPhotoInput" accept="image/*" multiple style="display:none;" />
+
+      <!-- CRITICAL REQUIREMENT #5: Cancel / Add Text / Add Photo / Complete ALL AT THE BOTTOM -->
+      <div class="bottom-action-dock">
+        <button type="button" class="dock-btn danger" id="btnCancelEditor">
+          취소
+        </button>
+        <button type="button" class="dock-btn" id="btnAddTextBlock">
+          + 글블록
+        </button>
+        <button type="button" class="dock-btn secondary-accent" id="btnAddPhotoBlock">
+          📷 사진첨부
+        </button>
+        <button type="button" class="dock-btn primary" id="btnSavePost">
+          완료
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         7. OFFLINE PRIVACY, PIN LOCK & BACKUP MODAL
+         ========================================================================== -->
+    <section class="screen-modal" id="privacyModal">
+      <div class="modal-info-header">
+        <span class="modal-info-title">🔒 보안 및 완전 오프라인 데이터 관리</span>
+        <span class="modal-info-hint">외부 전송 0%</span>
+      </div>
+
+      <div class="modal-scroll-body">
+        <div class="settings-card">
+          <h3>🛡️ 100% 로컬 독립 구조 (Zero Network)</h3>
+          <p>
+            이 HTML 파일은 외부 서버나 클라우드와 일절 통신하지 않습니다. 작성한 모든 글과 고화질 사진은 오직 내 아이폰 브라우저 내부 <strong>IndexedDB</strong>에만 보관되며, 삭제 시 어디에도 흔적이 남지 않습니다.
+          </p>
+          <div style="font-size:12.5px;font-weight:700;color:var(--accent-green);" id="storageStatsLabel">
+            현재 저장된 게시물: 계산중...
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h3>🔢 4자리 비밀 PIN 잠금</h3>
+          <p>앱을 열 때 4자리 암호를 입력해야만 일기장을 볼 수 있도록 잠금을 설정합니다.</p>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="password" id="pinSetupInput" maxlength="4" inputmode="numeric" class="editor-input" style="width:130px;text-align:center;letter-spacing:6px;" placeholder="4자리 숫자" />
+            <button type="button" class="dock-btn primary" id="btnSavePin" style="height:40px;">PIN 설정</button>
+            <button type="button" class="dock-btn danger" id="btnClearPin" style="height:40px;">해제</button>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h3>📦 파일 백업 내보내기 / 복원하기</h3>
+          <p>기기를 변경하거나 브라우저 캐시를 지우기 전에 모든 글과 사진을 단일 <code>.json</code> 파일로 아이폰 '파일' 앱에 백업해 둘 수 있습니다.</p>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="dock-btn" id="btnExportBackup" style="flex:1;">📥 백업 파일 저장</button>
+            <button type="button" class="dock-btn secondary-accent" id="btnImportBackup" style="flex:1;">📤 백업 불러오기</button>
+            <input type="file" id="hiddenBackupInput" accept=".json,application/json" style="display:none;" />
+          </div>
+        </div>
+
+        <div class="settings-card" style="border-color:rgba(248,113,113,0.35);">
+          <h3 style="color:#f87171;">💣 모든 일기 영구 삭제 (완전 초기화)</h3>
+          <p>내 기기에 저장된 모든 게시물, 사진, 댓글 데이터를 즉시 영구 파기합니다. 외부 서버에 업로드된 적이 없으므로 삭제 후에는 누구도 복구할 수 없습니다.</p>
+          <button type="button" class="dock-btn danger" id="btnNukeAllData" style="width:100%;">
+            ⚠️ 모든 데이터 즉시 영구 삭제
+          </button>
+        </div>
+      </div>
+
+      <div class="bottom-action-dock">
+        <button type="button" class="dock-btn primary" id="btnClosePrivacy">
+          닫기 (게시판으로 돌아가기)
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         8. PIN LOCK SCREEN OVERLAY
+         ========================================================================== -->
+    <div class="pin-lock-screen" id="pinLockScreen">
+      <div style="text-align:center;">
+        <div class="brand-badge" style="display:inline-block;margin-bottom:10px;">SECRET DIARY LOCK</div>
+        <h2 style="font-size:21px;font-weight:800;margin-bottom:6px;">비밀갤러리 잠금 해제</h2>
+        <p style="font-size:13px;color:var(--text-secondary);" id="pinPromptSub">설정한 4자리 PIN 번호를 입력하세요</p>
+      </div>
+
+      <div class="pin-dots" id="pinDotsContainer">
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+        <div class="pin-dot"></div>
+      </div>
+
+      <div class="pin-keypad" id="pinKeypad">
+        <button type="button" class="pin-key" data-digit="1">1</button>
+        <button type="button" class="pin-key" data-digit="2">2</button>
+        <button type="button" class="pin-key" data-digit="3">3</button>
+        <button type="button" class="pin-key" data-digit="4">4</button>
+        <button type="button" class="pin-key" data-digit="5">5</button>
+        <button type="button" class="pin-key" data-digit="6">6</button>
+        <button type="button" class="pin-key" data-digit="7">7</button>
+        <button type="button" class="pin-key" data-digit="8">8</button>
+        <button type="button" class="pin-key" data-digit="9">9</button>
+        <button type="button" class="pin-key" data-digit="CLR" style="font-size:13px;">초기화</button>
+        <button type="button" class="pin-key" data-digit="0">0</button>
+        <button type="button" class="pin-key" data-digit="DEL" style="font-size:15px;">⌫</button>
+      </div>
+    </div>
+
+    <!-- ==========================================================================
+         9. CUSTOM CONFIRMATION SHEET & TOAST (Zero native alert/confirm)
+         ========================================================================== -->
+    <div class="dialog-backdrop" id="confirmDialog">
+      <div class="dialog-sheet">
+        <h3 id="confirmDialogTitle" style="font-size:17px;font-weight:800;margin-bottom:8px;">확인</h3>
+        <p id="confirmDialogMessage" style="font-size:13.5px;color:var(--text-secondary);line-height:1.5;margin-bottom:18px;"></p>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="dock-btn" id="btnConfirmCancel" style="flex:1;">취소</button>
+          <button type="button" class="dock-btn primary" id="btnConfirmOk" style="flex:1;">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-banner" id="toastBanner">알림 메시지</div>
+
+  </div>
+
+  <!-- ==========================================================================
+       10. APPLICATION JAVASCRIPT (IndexedDB + Image Compressor + Block Editor)
+       ========================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ------------------------------------------------------------------------
+         1. INDEXEDDB OFFLINE STORAGE ENGINE
+         ------------------------------------------------------------------------ */
+      const DB_NAME = 'SecretBlindGalleryDiaryDB_v1';
+      const STORE_POSTS = 'posts';
+      const PREF_KEY = 'secret_diary_prefs_v1';
+
+      let dbInstance = null;
+      let allPosts = [];
+      let currentCategory = 'ALL';
+      let currentSearchQuery = '';
+      let viewMode = 'insta'; // 'insta' | 'compact'
+      let activePostId = null;
+      let editingPostId = null;
+      let editorBlocks = []; // Array of { id, type: 'text'|'image', content, caption }
+      let activeReplyParentId = null;
+      let carouselIndices = {}; // postId -> current image index
+
+      function loadPrefs() {
+        try {
+          const raw = localStorage.getItem(PREF_KEY);
+          return raw ? JSON.parse(raw) : { theme: 'dark', viewMode: 'insta', pin: '' };
+        } catch (e) {
+          return { theme: 'dark', viewMode: 'insta', pin: '' };
+        }
+      }
+
+      function savePrefs(prefs) {
+        try {
+          localStorage.setItem(PREF_KEY, JSON.stringify(prefs));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      let appPrefs = loadPrefs();
+
+      function openDatabase() {
+        return new Promise((resolve, reject) => {
+          if (dbInstance) return resolve(dbInstance);
+          const req = indexedDB.open(DB_NAME, 1);
+          req.onupgradeneeded = function (e) {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_POSTS)) {
+              const store = db.createObjectStore(STORE_POSTS, { keyPath: 'id' });
+              store.createIndex('createdAt', 'createdAt', { unique: false });
+            }
+          };
+          req.onsuccess = function (e) {
+            dbInstance = e.target.result;
+            resolve(dbInstance);
+          };
+          req.onerror = function (e) {
+            reject(e.target.error);
+          };
+        });
+      }
+
+      async function getAllPostsFromDB() {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_POSTS, 'readonly');
+          const store = tx.objectStore(STORE_POSTS);
+          const req = store.getAll();
+          req.onsuccess = () => {
+            const list = req.result || [];
+            list.sort((a, b) => b.createdAt - a.createdAt);
+            resolve(list);
+          };
+          req.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async function savePostToDB(postObj) {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_POSTS, 'readwrite');
+          const store = tx.objectStore(STORE_POSTS);
+          store.put(postObj);
+          tx.oncomplete = () => resolve(postObj);
+          tx.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async function deletePostFromDB(postId) {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_POSTS, 'readwrite');
+          const store = tx.objectStore(STORE_POSTS);
+          store.delete(postId);
+          tx.oncomplete = () => resolve();
+          tx.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async function clearAllPostsInDB() {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_POSTS, 'readwrite');
+          const store = tx.objectStore(STORE_POSTS);
+          store.clear();
+          tx.oncomplete = () => resolve();
+          tx.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      /* ------------------------------------------------------------------------
+         2. SAMPLE OFFLINE ILLUSTRATION GENERATOR (Canvas -> DataURL)
+         Creates vibrant aesthetic illustrations offline for initial onboarding
+         ------------------------------------------------------------------------ */
+      function createSampleArtwork(themeType, titleText, subText) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 800;
+        const ctx = canvas.getContext('2d');
+
+        // Background Gradient
+        const grad = ctx.createLinearGradient(0, 0, 800, 800);
+        if (themeType === 'night') {
+          grad.addColorStop(0, '#0f172a');
+          grad.addColorStop(0.5, '#1e1b4b');
+          grad.addColorStop(1, '#3b0764');
+        } else if (themeType === 'sunset') {
+          grad.addColorStop(0, '#ff4757');
+          grad.addColorStop(0.5, '#ff6b81');
+          grad.addColorStop(1, '#5352ed');
+        } else {
+          grad.addColorStop(0, '#059669');
+          grad.addColorStop(1, '#0284c7');
+        }
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 800, 800);
+
+        // Glowing Decorative Circles
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.beginPath();
+        ctx.arc(650, 160, 210, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(140, 660, 240, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Card Frame
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.fillRect(60, 460, 680, 260);
+
+        // Typography
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 44px -apple-system, sans-serif';
+        ctx.fillText(titleText, 95, 550);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+        ctx.font = '600 28px -apple-system, sans-serif';
+        ctx.fillText(subText, 95, 615);
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = '700 22px -apple-system, sans-serif';
+        ctx.fillText('100% OFFLINE · IPHONE 14 PRO EDITION', 95, 675);
+
+        return canvas.toDataURL('image/jpeg', 0.85);
+      }
+
+      async function seedInitialPostsIfEmpty() {
+        const existing = await getAllPostsFromDB();
+        if (existing.length > 0) return;
+
+        const now = Date.now();
+        const sample1 = {
+          id: 'post_welcome_1',
+          category: '사진첩',
+          nickname: '익명 · 갤주',
+          title: '[공지] 나만의 비밀 블라인드 & 인스타 일기장 사용법.jpg',
+          isConcept: true,
+          likes: 42,
+          dislikes: 0,
+          views: 128,
+          createdAt: now - 1000 * 60 * 25,
+          blocks: [
+            {
+              id: 'b1',
+              type: 'text',
+              content: '환영합니다! 이 웹앱은 외부 인터넷이나 서버와 전혀 연결되지 않는 100% 오프라인 개인 일기장입니다.\n\n블라인드/디시인사이드 특유의 중독성 있는 커뮤니티 감성과 인스타그램의 사진 피드, 그리고 네이버 블로그처럼 글과 사진을 자유롭게 교차 배치하는 에디터를 하나로 합쳤습니다.'
+            },
+            {
+              id: 'b2',
+              type: 'image',
+              content: createSampleArtwork('sunset', '아이폰 14 PRO 최적화', '상단 다이나믹 아일랜드 간섭 ZERO'),
+              caption: '▲ 사진과 글 블록을 원하는 순서대로 무제한 교차 배치할 수 있습니다'
+            },
+            {
+              id: 'b3',
+              type: 'text',
+              content: '📌 핵심 기능 요약:\n1. 게시물 작성 시 [취소 / 글블록 / 사진첨부 / 완료] 버튼이 전부 화면 맨 아래쪽에 있어 아이폰 14 Pro 다이나믹 아일랜드와 절대 겹치지 않습니다.\n2. 피드에서 사진을 더블탭하면 인스타처럼 하트 추천이 올라갑니다.\n3. 내 일기에 내가 직접 여러 익명 닉네임(ㅇㅇ, 팩트폭격기 등)으로 셀프 댓글놀이를 할 수 있습니다.\n4. 이 샘플 게시물은 우측 하단 [삭제] 버튼으로 언제든 지우실 수 있습니다!'
+            },
+            {
+              id: 'b4',
+              type: 'image',
+              content: createSampleArtwork('night', '완전 오프라인 독립형', '내가 지우면 우주 어디에도 남지 않음'),
+              caption: '▲ 여러 장의 사진을 넣으면 인스타처럼 좌우 넘기기 캐러셀이 자동 생성됩니다'
+            }
+          ],
+          comments: [
+            {
+              id: 'c1',
+              nickname: 'ㅇㅇ(211.36)',
+              content: '와 혼자 북치고 장구치고 댓글놀이하기 딱 좋네 ㅋㅋㅋ 개념글 보낸다',
+              createdAt: now - 1000 * 60 * 15,
+              parentId: null
+            },
+            {
+              id: 'c2',
+              nickname: '익명 · 갤주',
+              content: '고맙다 ㅋㅋ 앞으로 흑역사랑 일기 여기에 다 박제함',
+              createdAt: now - 1000 * 60 * 10,
+              parentId: 'c1'
+            }
+          ]
+        };
+
+        await savePostToDB(sample1);
+      }
+
+      /* ------------------------------------------------------------------------
+         3. CLIENT-SIDE IMAGE COMPRESSION (HTML5 Canvas -> JPEG 0.82)
+         Ensures high-res iPhone photos store smoothly offline
+         ------------------------------------------------------------------------ */
+      function compressImageFile(file, maxDimension = 1200, quality = 0.82) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            const img = new Image();
+            img.onload = function () {
+              let width = img.width;
+              let height = img.height;
+              if (width > height && width > maxDimension) {
+                height = Math.round((height * maxDimension) / width);
+                width = maxDimension;
+              } else if (height >= width && height > maxDimension) {
+                width = Math.round((width * maxDimension) / height);
+                height = maxDimension;
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+              resolve(compressedBase64);
+            };
+            img.onerror = reject;
+            img.src = event.target.result;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      /* ------------------------------------------------------------------------
+         4. UI HELPERS (Toast, Custom Confirm Dialog, Relative Time, HTML Escape)
+         ------------------------------------------------------------------------ */
+      let toastTimer = null;
+      function showToast(msg) {
+        const banner = document.getElementById('toastBanner');
+        banner.textContent = msg;
+        banner.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          banner.classList.remove('show');
+        }, 2300);
+      }
+
+      let confirmCallback = null;
+      function openConfirmDialog(title, message, onConfirm) {
+        document.getElementById('confirmDialogTitle').textContent = title;
+        document.getElementById('confirmDialogMessage').textContent = message;
+        confirmCallback = onConfirm;
+        document.getElementById('confirmDialog').classList.add('open');
+      }
+
+      document.getElementById('btnConfirmCancel').addEventListener('click', () => {
+        document.getElementById('confirmDialog').classList.remove('open');
+        confirmCallback = null;
+      });
+
+      document.getElementById('btnConfirmOk').addEventListener('click', () => {
+        document.getElementById('confirmDialog').classList.remove('open');
+        if (typeof confirmCallback === 'function') confirmCallback();
+        confirmCallback = null;
+      });
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function formatRelativeTime(timestamp) {
+        const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+        if (diffSec < 60) return '방금 전';
+        const diffMin = Math.floor(diffSec / 60);
+        if (diffMin < 60) return `${diffMin}분 전`;
+        const diffHour = Math.floor(diffMin / 60);
+        if (diffHour < 24) return `${diffHour}시간 전`;
+        const d = new Date(timestamp);
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${mm}.${dd} ${hh}:${min}`;
+      }
+
+      function getPostImages(post) {
+        if (!post || !Array.isArray(post.blocks)) return [];
+        return post.blocks.filter(b => b.type === 'image' && b.content);
+      }
+
+      function getPostTextPreview(post) {
+        if (!post || !Array.isArray(post.blocks)) return '';
+        return post.blocks
+          .filter(b => b.type === 'text' && b.content.trim())
+          .map(b => b.content.trim())
+          .join('\n\n');
+      }
+
+      function getAvatarColors(nickname) {
+        const palettes = [
+          'linear-gradient(135deg, #ef4444, #f97316)',
+          'linear-gradient(135deg, #6366f1, #ec4899)',
+          'linear-gradient(135deg, #10b981, #0ea5e9)',
+          'linear-gradient(135deg, #8b5cf6, #3b82f6)',
+          'linear-gradient(135deg, #f59e0b, #ef4444)'
+        ];
+        let hash = 0;
+        const s = nickname || '익명';
+        for (let i = 0; i < s.length; i++) hash += s.charCodeAt(i);
+        return palettes[hash % palettes.length];
+      }
+
+      /* ------------------------------------------------------------------------
+         5. RENDER FEED (INSTAGRAM CARD VIEW vs. DC/BLIND COMPACT LIST VIEW)
+         ------------------------------------------------------------------------ */
+      async function refreshFeed() {
+        allPosts = await getAllPostsFromDB();
+        document.getElementById('totalPostCountBadge').textContent = `(${allPosts.length})`;
+
+        const filtered = allPosts.filter(post => {
+          if (currentCategory === 'CONCEPT' && !post.isConcept) return false;
+          if (currentCategory !== 'ALL' && currentCategory !== 'CONCEPT' && post.category !== currentCategory) {
+            return false;
+          }
+          if (currentSearchQuery) {
+            const q = currentSearchQuery.toLowerCase();
+            const inTitle = (post.title || '').toLowerCase().includes(q);
+            const inNick = (post.nickname || '').toLowerCase().includes(q);
+            const inBody = getPostTextPreview(post).toLowerCase().includes(q);
+            return inTitle || inNick || inBody;
+          }
+          return true;
+        });
+
+        const container = document.getElementById('feedListContainer');
+        container.className = viewMode === 'compact' ? 'feed-list compact-mode' : 'feed-list';
+
+        if (filtered.length === 0) {
+          container.innerHTML = `
+            <div style="padding:65px 20px;text-align:center;color:var(--text-muted);">
+              <div style="font-size:38px;margin-bottom:10px;">📭</div>
+              <div style="font-size:15px;font-weight:800;color:var(--text-secondary);margin-bottom:4px;">아직 등록된 게시물이 없습니다</div>
+              <div style="font-size:12.5px;">화면 하단 가운데 [글쓰기] 버튼을 눌러 첫 비밀 일기를 남겨보세요!</div>
+            </div>
+          `;
+          return;
+        }
+
+        if (viewMode === 'compact') {
+          container.innerHTML = filtered.map(post => {
+            const images = getPostImages(post);
+            const commentCount = (post.comments || []).length;
+            return `
+              <div class="compact-row" data-open-id="${post.id}">
+                <div class="compact-left">
+                  <div class="compact-title-line">
+                    <span class="cat-mini-badge">${escapeHtml(post.category)}</span>
+                    ${post.isConcept ? '<span class="concept-badge">🌟개념</span>' : ''}
+                    <span class="compact-title">${escapeHtml(post.title)}</span>
+                    ${commentCount > 0 ? `<span class="compact-comment-cnt">[${commentCount}]</span>` : ''}
+                  </div>
+                  <div class="compact-meta">
+                    <span>${escapeHtml(post.nickname)}</span>
+                    <span>·</span>
+                    <span>${formatRelativeTime(post.createdAt)}</span>
+                    <span>·</span>
+                    <span>추천 ${post.likes || 0}</span>
+                    <span>·</span>
+                    <span>조회 ${post.views || 1}</span>
+                  </div>
+                </div>
+                ${images.length > 0 ? `<img class="compact-thumb" src="${images[0].content}" alt="썸네일" />` : ''}
+              </div>
+            `;
+          }).join('');
+          return;
+        }
+
+        // Instagram + Blind Hybrid Card View
+        container.innerHTML = filtered.map(post => {
+          const images = getPostImages(post);
+          const excerpt = getPostTextPreview(post);
+          const commentCount = (post.comments || []).length;
+          const curIdx = carouselIndices[post.id] || 0;
+          const safeIdx = Math.min(curIdx, Math.max(0, images.length - 1));
+          const initialChar = (post.nickname || '익')[0];
+
+          let mediaHtml = '';
+          if (images.length > 0) {
+            const curImg = images[safeIdx];
+            mediaHtml = `
+              <div class="insta-media-box" data-media-post="${post.id}">
+                <img src="${curImg.content}" alt="게시물 사진" data-img-post="${post.id}" />
+                <div class="heart-burst" id="heartBurst_${post.id}">❤️</div>
+                ${images.length > 1 ? `
+                  <div class="carousel-counter" id="carouselCount_${post.id}">${safeIdx + 1} / ${images.length}</div>
+                  <button type="button" class="carousel-nav-btn prev" data-carousel-dir="-1" data-carousel-post="${post.id}">‹</button>
+                  <button type="button" class="carousel-nav-btn next" data-carousel-dir="1" data-carousel-post="${post.id}">›</button>
+                  <div class="carousel-dots" id="carouselDots_${post.id}">
+                    ${images.map((_, idx) => `<span class="carousel-dot ${idx === safeIdx ? 'active' : ''}"></span>`).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }
+
+          return `
+            <article class="post-card" data-card-id="${post.id}">
+              <!-- Top Community Profile Header -->
+              <div class="card-meta-header" data-open-id="${post.id}" style="cursor:pointer;">
+                <div class="author-profile">
+                  <div class="avatar-circle" style="background:${getAvatarColors(post.nickname)};">${escapeHtml(initialChar)}</div>
+                  <div class="author-info">
+                    <div class="author-top-line">
+                      <span class="cat-mini-badge">${escapeHtml(post.category)}</span>
+                      ${post.isConcept ? '<span class="concept-badge">🌟 개념글</span>' : ''}
+                      <span class="author-nickname">${escapeHtml(post.nickname)}</span>
+                    </div>
+                    <div class="author-sub-line">
+                      ${formatRelativeTime(post.createdAt)} · 조회 ${post.views || 1}
+                    </div>
+                  </div>
+                </div>
+                <span style="color:var(--text-muted);font-size:18px;padding:0 4px;">•••</span>
+              </div>
+
+              <!-- Instagram Prominent Photo Carousel -->
+              ${mediaHtml}
+
+              <!-- Title & Excerpt -->
+              <div class="card-body-clickable" data-open-id="${post.id}">
+                <h2 class="card-title">${escapeHtml(post.title)}</h2>
+                ${excerpt ? `<div class="card-excerpt">${escapeHtml(excerpt)}</div>` : ''}
+              </div>
+
+              <!-- Reaction Bar -->
+              <div class="card-reaction-bar">
+                <div class="reaction-group">
+                  <button type="button" class="react-btn ${post.likes > 0 ? 'liked' : ''}" data-like-id="${post.id}">
+                    ❤️ 추천 <span>${post.likes || 0}</span>
+                  </button>
+                  <button type="button" class="react-btn" data-open-id="${post.id}">
+                    💬 댓글 <span>${commentCount}</span>
+                  </button>
+                </div>
+                <button type="button" class="react-btn ${post.isConcept ? 'starred' : ''}" data-star-id="${post.id}" title="개념글 등록/해제">
+                  ${post.isConcept ? '🌟 개념글' : '☆ 개념글 지정'}
+                </button>
+              </div>
+            </article>
+          `;
+        }).join('');
+      }
+
+      /* ------------------------------------------------------------------------
+         6. FEED INTERACTIONS (Carousel Next/Prev, Double-Tap Like, Open Detail)
+         ------------------------------------------------------------------------ */
+      let lastTapTime = 0;
+      document.getElementById('feedListContainer').addEventListener('click', async function (e) {
+        // 1. Carousel Prev/Next Button
+        const navBtn = e.target.closest('[data-carousel-post]');
+        if (navBtn) {
+          e.stopPropagation();
+          const postId = navBtn.getAttribute('data-carousel-post');
+          const dir = parseInt(navBtn.getAttribute('data-carousel-dir'), 10);
+          const post = allPosts.find(p => p.id === postId);
+          if (!post) return;
+          const imgs = getPostImages(post);
+          if (imgs.length <= 1) return;
+          const cur = carouselIndices[postId] || 0;
+          const nextIdx = (cur + dir + imgs.length) % imgs.length;
+          carouselIndices[postId] = nextIdx;
+          refreshFeed();
+          return;
+        }
+
+        // 2. Like Button in Feed
+        const likeBtn = e.target.closest('[data-like-id]');
+        if (likeBtn) {
+          e.stopPropagation();
+          const postId = likeBtn.getAttribute('data-like-id');
+          const post = allPosts.find(p => p.id === postId);
+          if (!post) return;
+          post.likes = (post.likes || 0) + 1;
+          await savePostToDB(post);
+          refreshFeed();
+          return;
+        }
+
+        // 3. Concept Star Toggle in Feed
+        const starBtn = e.target.closest('[data-star-id]');
+        if (starBtn) {
+          e.stopPropagation();
+          const postId = starBtn.getAttribute('data-star-id');
+          const post = allPosts.find(p => p.id === postId);
+          if (!post) return;
+          post.isConcept = !post.isConcept;
+          await savePostToDB(post);
+          showToast(post.isConcept ? '🌟 개념글로 등록되었습니다!' : '개념글에서 해제되었습니다.');
+          refreshFeed();
+          return;
+        }
+
+        // 4. Image Double-Tap to Like (or Single Tap to Open Detail)
+        const mediaBox = e.target.closest('[data-media-post]');
+        if (mediaBox) {
+          const postId = mediaBox.getAttribute('data-media-post');
+          const now = Date.now();
+          if (now - lastTapTime < 300) {
+            const post = allPosts.find(p => p.id === postId);
+            if (post) {
+              post.likes = (post.likes || 0) + 1;
+              await savePostToDB(post);
+              const burst = document.getElementById(`heartBurst_${postId}`);
+              if (burst) {
+                burst.classList.add('show');
+                setTimeout(() => burst.classList.remove('show'), 650);
+              }
+              setTimeout(() => refreshFeed(), 450);
+            }
+            lastTapTime = 0;
+            return;
+          }
+          lastTapTime = now;
+          openPostDetail(postId);
+          return;
+        }
+
+        // 5. Open Post Detail
+        const openTrigger = e.target.closest('[data-open-id]');
+        if (openTrigger) {
+          const postId = openTrigger.getAttribute('data-open-id');
+          openPostDetail(postId);
+        }
+      });
+
+      /* ------------------------------------------------------------------------
+         7. POST DETAIL VIEW & SELF-COMMENT SYSTEM
+         ------------------------------------------------------------------------ */
+      async function openPostDetail(postId) {
+        const post = allPosts.find(p => p.id === postId);
+        if (!post) return;
+        activePostId = postId;
+        activeReplyParentId = null;
+        document.getElementById('replyTargetBadge').style.display = 'none';
+
+        // Increment view count for community realism
+        post.views = (post.views || 0) + 1;
+        await savePostToDB(post);
+
+        renderPostDetailContent(post);
+        document.getElementById('detailModal').classList.add('open');
+        document.getElementById('detailScrollBody').scrollTop = 0;
+        refreshFeed();
+      }
+
+      function renderPostDetailContent(post) {
+        const initialChar = (post.nickname || '익')[0];
+        const blocksHtml = (post.blocks || []).map(block => {
+          if (block.type === 'image') {
+            return `
+              <figure class="detail-photo-figure">
+                <img src="${block.content}" alt="첨부 이미지" />
+                ${block.caption ? `<figcaption class="detail-photo-caption">${escapeHtml(block.caption)}</figcaption>` : ''}
+              </figure>
+            `;
+          }
+          return `<div class="detail-text-block">${escapeHtml(block.content)}</div>`;
+        }).join('');
+
+        const articleEl = document.getElementById('detailArticleContainer');
+        articleEl.innerHTML = `
+          <div class="detail-cat-row">
+            <span class="cat-mini-badge">${escapeHtml(post.category)}</span>
+            ${post.isConcept ? '<span class="concept-badge">🌟 개념글</span>' : ''}
+          </div>
+          <h1 class="detail-title">${escapeHtml(post.title)}</h1>
+          <div class="detail-author-bar">
+            <div class="author-profile">
+              <div class="avatar-circle" style="background:${getAvatarColors(post.nickname)};">${escapeHtml(initialChar)}</div>
+              <div class="author-info">
+                <span class="author-nickname">${escapeHtml(post.nickname)}</span>
+                <span class="author-sub-line">${formatRelativeTime(post.createdAt)} · 조회 ${post.views || 1}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Blog-style Interleaved Content Flow -->
+          <div class="detail-blocks-flow">
+            ${blocksHtml}
+          </div>
+
+          <!-- DC Inside / Blind Style Voting Circles -->
+          <div class="dc-vote-box">
+            <button type="button" class="vote-circle-btn up" id="btnDetailVoteUp">
+              <span class="vote-num">${post.likes || 0}</span>
+              <span class="vote-label">👍 개념추천</span>
+            </button>
+            <button type="button" class="vote-circle-btn concept ${post.isConcept ? 'active' : ''}" id="btnDetailToggleConcept">
+              <span class="vote-num">${post.isConcept ? '★' : '☆'}</span>
+              <span class="vote-label">개념글지정</span>
+            </button>
+            <button type="button" class="vote-circle-btn" id="btnDetailVoteDown">
+              <span class="vote-num">${post.dislikes || 0}</span>
+              <span class="vote-label">👎 비추</span>
+            </button>
+          </div>
+        `;
+
+        // Bind Vote Buttons
+        document.getElementById('btnDetailVoteUp').addEventListener('click', async () => {
+          post.likes = (post.likes || 0) + 1;
+          if (post.likes >= 10 && !post.isConcept) {
+            post.isConcept = true;
+            showToast('🎉 추천 10개 달성! 자동으로 개념글에 등극했습니다!');
+          }
+          await savePostToDB(post);
+          renderPostDetailContent(post);
+          refreshFeed();
+        });
+
+        document.getElementById('btnDetailToggleConcept').addEventListener('click', async () => {
+          post.isConcept = !post.isConcept;
+          await savePostToDB(post);
+          showToast(post.isConcept ? '🌟 개념글로 지정되었습니다!' : '개념글 해제됨');
+          renderPostDetailContent(post);
+          refreshFeed();
+        });
+
+        document.getElementById('btnDetailVoteDown').addEventListener('click', async () => {
+          post.dislikes = (post.dislikes || 0) + 1;
+          await savePostToDB(post);
+          renderPostDetailContent(post);
+        });
+
+        renderCommentsList(post);
+      }
+
+      function renderCommentsList(post) {
+        const comments = post.comments || [];
+        document.getElementById('detailCommentCount').textContent = comments.length;
+        const listEl = document.getElementById('detailCommentList');
+
+        if (comments.length === 0) {
+          listEl.innerHTML = `<div style="text-align:center;padding:18px;font-size:12.5px;color:var(--text-muted);">첫 익명 자아 댓글을 남겨보세요!</div>`;
+          return;
+        }
+
+        // Order root comments and their nested replies
+        const roots = comments.filter(c => !c.parentId);
+        const replies = comments.filter(c => c.parentId);
+
+        const ordered = [];
+        roots.forEach(r => {
+          ordered.push(r);
+          replies.filter(rep => rep.parentId === r.id).forEach(rep => ordered.push(rep));
+        });
+
+        listEl.innerHTML = ordered.map(c => {
+          const isOp = c.nickname === post.nickname;
+          return `
+            <div class="comment-item ${c.parentId ? 'reply' : ''}">
+              <div class="comment-top">
+                <span class="comment-nick">
+                  ${c.parentId ? '↳ ' : ''}${escapeHtml(c.nickname)}
+                  ${isOp ? '<span class="op-badge">작성자</span>' : ''}
+                </span>
+                <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted);">
+                  <span>${formatRelativeTime(c.createdAt)}</span>
+                  ${!c.parentId ? `<button type="button" data-reply-id="${c.id}" data-reply-nick="${escapeHtml(c.nickname)}" style="background:none;border:none;color:var(--accent-secondary);font-weight:700;cursor:pointer;font-size:11px;">답글</button>` : ''}
+                  <button type="button" data-del-comment="${c.id}" style="background:none;border:none;color:#f87171;font-weight:700;cursor:pointer;font-size:11px;">삭제</button>
+                </div>
+              </div>
+              <div class="comment-body">${escapeHtml(c.content)}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Comment List Delegation (Reply & Delete Comment)
+      document.getElementById('detailCommentList').addEventListener('click', async function (e) {
+        const replyBtn = e.target.closest('[data-reply-id]');
+        if (replyBtn) {
+          activeReplyParentId = replyBtn.getAttribute('data-reply-id');
+          const nick = replyBtn.getAttribute('data-reply-nick');
+          const badge = document.getElementById('replyTargetBadge');
+          badge.textContent = `@${nick} 에게 대댓글 ✕`;
+          badge.style.display = 'inline-block';
+          document.getElementById('commentTextInput').focus();
+          return;
+        }
+
+        const delBtn = e.target.closest('[data-del-comment]');
+        if (delBtn) {
+          const cid = delBtn.getAttribute('data-del-comment');
+          const post = allPosts.find(p => p.id === activePostId);
+          if (!post) return;
+          post.comments = (post.comments || []).filter(c => c.id !== cid && c.parentId !== cid);
+          await savePostToDB(post);
+          renderCommentsList(post);
+          refreshFeed();
+        }
+      });
+
+      document.getElementById('replyTargetBadge').addEventListener('click', function () {
+        activeReplyParentId = null;
+        this.style.display = 'none';
+      });
+
+      // Comment Persona Quick Chips
+      document.getElementById('commentPersonaChips').addEventListener('click', function (e) {
+        const chip = e.target.closest('[data-nick]');
+        if (chip) {
+          document.getElementById('commentNickInput').value = chip.getAttribute('data-nick');
+        }
+      });
+
+      // Submit Self-Comment
+      document.getElementById('btnSubmitComment').addEventListener('click', async function () {
+        const post = allPosts.find(p => p.id === activePostId);
+        if (!post) return;
+        const nick = document.getElementById('commentNickInput').value.trim() || 'ㅇㅇ';
+        const text = document.getElementById('commentTextInput').value.trim();
+        if (!text) {
+          showToast('댓글 내용을 입력해주세요.');
+          return;
+        }
+        if (!Array.isArray(post.comments)) post.comments = [];
+        post.comments.push({
+          id: 'cmt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          nickname: nick,
+          content: text,
+          createdAt: Date.now(),
+          parentId: activeReplyParentId
+        });
+        document.getElementById('commentTextInput').value = '';
+        activeReplyParentId = null;
+        document.getElementById('replyTargetBadge').style.display = 'none';
+
+        await savePostToDB(post);
+        renderCommentsList(post);
+        refreshFeed();
+      });
+
+      // Detail Bottom Bar Actions
+      document.getElementById('btnCloseDetail').addEventListener('click', () => {
+        document.getElementById('detailModal').classList.remove('open');
+        activePostId = null;
+      });
+
+      document.getElementById('btnEditCurrentPost').addEventListener('click', () => {
+        const post = allPosts.find(p => p.id === activePostId);
+        if (!post) return;
+        openEditorModal(post);
+      });
+
+      document.getElementById('btnDeleteCurrentPost').addEventListener('click', () => {
+        if (!activePostId) return;
+        openConfirmDialog(
+          '게시물 영구 삭제',
+          '이 게시물과 첨부된 사진을 기기에서 영구 삭제하시겠습니까? 외부 서버에 백업되지 않으므로 즉시 소멸됩니다.',
+          async () => {
+            await deletePostFromDB(activePostId);
+            document.getElementById('detailModal').classList.remove('open');
+            activePostId = null;
+            showToast('🗑️ 게시물이 완전히 삭제되었습니다.');
+            refreshFeed();
+          }
+        );
+      });
+
+      /* ------------------------------------------------------------------------
+         8. BLOG-STYLE BLOCK EDITOR (Cancel / Add Text / Add Photo / Complete at Bottom)
+         ------------------------------------------------------------------------ */
+      function openEditorModal(postToEdit = null) {
+        if (postToEdit) {
+          editingPostId = postToEdit.id;
+          document.getElementById('editorModalHeading').textContent = '게시물 수정하기';
+          document.getElementById('editorCategorySelect').value = postToEdit.category || '일기';
+          document.getElementById('editorNicknameInput').value = postToEdit.nickname || '익명 · 나자신';
+          document.getElementById('editorTitleInput').value = postToEdit.title || '';
+          editorBlocks = JSON.parse(JSON.stringify(postToEdit.blocks || []));
+        } else {
+          editingPostId = null;
+          document.getElementById('editorModalHeading').textContent = '새 비밀 게시물 작성';
+          document.getElementById('editorCategorySelect').value =
+            (currentCategory !== 'ALL' && currentCategory !== 'CONCEPT') ? currentCategory : '일기';
+          document.getElementById('editorNicknameInput').value = '익명 · 나자신';
+          document.getElementById('editorTitleInput').value = '';
+          editorBlocks = [
+            { id: 'blk_' + Date.now(), type: 'text', content: '' }
+          ];
+        }
+        renderEditorBlocks();
+        document.getElementById('editorModal').classList.add('open');
+      }
+
+      function syncEditorDOMValuesToState() {
+        const cards = document.querySelectorAll('#editorBlocksContainer .editor-block-card');
+        cards.forEach(card => {
+          const bid = card.getAttribute('data-block-id');
+          const blk = editorBlocks.find(b => b.id === bid);
+          if (!blk) return;
+          if (blk.type === 'text') {
+            const ta = card.querySelector('.block-textarea');
+            if (ta) blk.content = ta.value;
+          } else if (blk.type === 'image') {
+            const cap = card.querySelector('.block-caption-input');
+            if (cap) blk.caption = cap.value;
+          }
+        });
+      }
+
+      function renderEditorBlocks() {
+        const container = document.getElementById('editorBlocksContainer');
+        if (editorBlocks.length === 0) {
+          editorBlocks.push({ id: 'blk_' + Date.now(), type: 'text', content: '' });
+        }
+
+        container.innerHTML = editorBlocks.map((blk, idx) => {
+          if (blk.type === 'image') {
+            return `
+              <div class="editor-block-card" data-block-id="${blk.id}">
+                <div class="block-card-bar">
+                  <span>🖼️ 사진 블록 #${idx + 1}</span>
+                  <div class="block-ctrl-btns">
+                    <button type="button" class="mini-ctrl-btn" data-move-dir="-1" data-idx="${idx}">▲ 위로</button>
+                    <button type="button" class="mini-ctrl-btn" data-move-dir="1" data-idx="${idx}">▼ 아래로</button>
+                    <button type="button" class="mini-ctrl-btn del" data-del-idx="${idx}">✕ 삭제</button>
+                  </div>
+                </div>
+                <img class="block-photo-preview" src="${blk.content}" alt="첨부 사진" />
+                <input type="text" class="block-caption-input" value="${escapeHtml(blk.caption || '')}" placeholder="사진 설명 캡션 입력 (선택사항)" />
+              </div>
+            `;
+          }
+          return `
+            <div class="editor-block-card" data-block-id="${blk.id}">
+              <div class="block-card-bar">
+                <span>📝 텍스트 블록 #${idx + 1}</span>
+                <div class="block-ctrl-btns">
+                  <button type="button" class="mini-ctrl-btn" data-move-dir="-1" data-idx="${idx}">▲ 위로</button>
+                  <button type="button" class="mini-ctrl-btn" data-move-dir="1" data-idx="${idx}">▼ 아래로</button>
+                  <button type="button" class="mini-ctrl-btn del" data-del-idx="${idx}">✕ 삭제</button>
+                </div>
+              </div>
+              <textarea class="block-textarea" placeholder="자유롭게 일기나 생각을 적어보세요...">${escapeHtml(blk.content || '')}</textarea>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Block Move Up/Down & Delete Delegation
+      document.getElementById('editorBlocksContainer').addEventListener('click', function (e) {
+        const moveBtn = e.target.closest('[data-move-dir]');
+        if (moveBtn) {
+          syncEditorDOMValuesToState();
+          const idx = parseInt(moveBtn.getAttribute('data-idx'), 10);
+          const dir = parseInt(moveBtn.getAttribute('data-move-dir'), 10);
+          const targetIdx = idx + dir;
+          if (targetIdx < 0 || targetIdx >= editorBlocks.length) return;
+          const temp = editorBlocks[idx];
+          editorBlocks[idx] = editorBlocks[targetIdx];
+          editorBlocks[targetIdx] = temp;
+          renderEditorBlocks();
+          return;
+        }
+
+        const delBtn = e.target.closest('[data-del-idx]');
+        if (delBtn) {
+          syncEditorDOMValuesToState();
+          const idx = parseInt(delBtn.getAttribute('data-del-idx'), 10);
+          editorBlocks.splice(idx, 1);
+          renderEditorBlocks();
+        }
+      });
+
+      // Editor Persona Quick Chips
+      document.getElementById('editorPersonaChips').addEventListener('click', function (e) {
+        const chip = e.target.closest('[data-nick]');
+        if (chip) {
+          document.getElementById('editorNicknameInput').value = chip.getAttribute('data-nick');
+        }
+      });
+
+      // Bottom Toolbar Buttons in Editor Modal
+      document.getElementById('btnCancelEditor').addEventListener('click', () => {
+        document.getElementById('editorModal').classList.remove('open');
+      });
+
+      document.getElementById('btnAddTextBlock').addEventListener('click', () => {
+        syncEditorDOMValuesToState();
+        editorBlocks.push({
+          id: 'blk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          type: 'text',
+          content: ''
+        });
+        renderEditorBlocks();
+        const body = document.getElementById('editorScrollBody');
+        setTimeout(() => { body.scrollTop = body.scrollHeight; }, 50);
+      });
+
+      document.getElementById('btnAddPhotoBlock').addEventListener('click', () => {
+        syncEditorDOMValuesToState();
+        document.getElementById('hiddenPhotoInput').click();
+      });
+
+      document.getElementById('hiddenPhotoInput').addEventListener('change', async function (e) {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        showToast(`📷 사진 ${files.length}장 최적화 압축 첨부중...`);
+
+        for (const file of files) {
+          try {
+            const compressedDataUrl = await compressImageFile(file, 1200, 0.82);
+            editorBlocks.push({
+              id: 'blk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+              type: 'image',
+              content: compressedDataUrl,
+              caption: ''
+            });
+          } catch (err) {
+            console.error(err);
+          }
+        }
+        // Automatically add an empty text block below the photo so user can keep writing like a blog!
+        editorBlocks.push({
+          id: 'blk_' + Date.now() + '_after',
+          type: 'text',
+          content: ''
+        });
+
+        this.value = '';
+        renderEditorBlocks();
+        const body = document.getElementById('editorScrollBody');
+        setTimeout(() => { body.scrollTop = body.scrollHeight; }, 80);
+      });
+
+      // Save / Publish Post
+      document.getElementById('btnSavePost').addEventListener('click', async () => {
+        syncEditorDOMValuesToState();
+        const category = document.getElementById('editorCategorySelect').value;
+        const nickname = document.getElementById('editorNicknameInput').value.trim() || '익명';
+        let title = document.getElementById('editorTitleInput').value.trim();
+
+        const cleanedBlocks = editorBlocks.filter(b => {
+          if (b.type === 'image') return Boolean(b.content);
+          return Boolean(b.content && b.content.trim());
+        });
+
+        if (!title && cleanedBlocks.length === 0) {
+          showToast('제목이나 본문/사진을 최소 1개 이상 입력해주세요.');
+          return;
+        }
+
+        if (!title) {
+          const firstText = cleanedBlocks.find(b => b.type === 'text');
+          title = firstText ? firstText.content.split('\n')[0].slice(0, 32) : '무제 사진 일기.jpg';
+        }
+
+        if (editingPostId) {
+          const existing = allPosts.find(p => p.id === editingPostId);
+          if (existing) {
+            existing.category = category;
+            existing.nickname = nickname;
+            existing.title = title;
+            existing.blocks = cleanedBlocks;
+            await savePostToDB(existing);
+            showToast('✅ 게시물이 수정되었습니다.');
+            if (activePostId === editingPostId) {
+              renderPostDetailContent(existing);
+            }
+          }
+        } else {
+          const newPost = {
+            id: 'post_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            category,
+            nickname,
+            title,
+            isConcept: false,
+            likes: 1,
+            dislikes: 0,
+            views: 1,
+            createdAt: Date.now(),
+            blocks: cleanedBlocks,
+            comments: []
+          };
+          await savePostToDB(newPost);
+          showToast('🎉 새 비밀 게시물이 등록되었습니다!');
+        }
+
+        document.getElementById('editorModal').classList.remove('open');
+        refreshFeed();
+      });
+
+      /* ------------------------------------------------------------------------
+         9. TOP BAR, CATEGORY FILTER, VIEW MODE & BOTTOM NAV CONTROLS
+         ------------------------------------------------------------------------ */
+      document.getElementById('categoryTabs').addEventListener('click', function (e) {
+        const tab = e.target.closest('[data-cat]');
+        if (!tab) return;
+        currentCategory = tab.getAttribute('data-cat');
+        document.querySelectorAll('#categoryTabs .cat-tab').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-cat') === currentCategory);
+        });
+        refreshFeed();
+      });
+
+      document.getElementById('btnToggleSearch').addEventListener('click', function () {
+        const drawer = document.getElementById('searchDrawer');
+        drawer.classList.toggle('open');
+        this.classList.toggle('active', drawer.classList.contains('open'));
+        if (drawer.classList.contains('open')) {
+          document.getElementById('searchInput').focus();
+        }
+      });
+
+      document.getElementById('searchInput').addEventListener('input', function () {
+        currentSearchQuery = this.value.trim();
+        refreshFeed();
+      });
+
+      document.getElementById('btnClearSearch').addEventListener('click', () => {
+        document.getElementById('searchInput').value = '';
+        currentSearchQuery = '';
+        refreshFeed();
+      });
+
+      function updateViewModeUI() {
+        document.getElementById('currentViewModeLabel').textContent =
+          viewMode === 'insta' ? '인스타 카드뷰' : '커뮤니티 목록뷰';
+      }
+
+      document.getElementById('btnToggleViewMode').addEventListener('click', () => {
+        viewMode = viewMode === 'insta' ? 'compact' : 'insta';
+        appPrefs.viewMode = viewMode;
+        savePrefs(appPrefs);
+        updateViewModeUI();
+        refreshFeed();
+        showToast(viewMode === 'insta' ? '📸 인스타그램 카드뷰로 전환됨' : '📋 커뮤니티 압축 목록뷰로 전환됨');
+      });
+
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        appPrefs.theme = theme;
+        savePrefs(appPrefs);
+      }
+
+      document.getElementById('btnToggleTheme').addEventListener('click', () => {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+      });
+
+      // Bottom Navigation Bar
+      function setBottomNavActive(btnId) {
+        ['navBtnHome', 'navBtnConcept', 'navBtnPhotos', 'navBtnPrivacy'].forEach(id => {
+          document.getElementById(id).classList.toggle('active', id === btnId);
+        });
+      }
+
+      document.getElementById('navBtnHome').addEventListener('click', () => {
+        setBottomNavActive('navBtnHome');
+        currentCategory = 'ALL';
+        document.querySelectorAll('#categoryTabs .cat-tab').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-cat') === 'ALL');
+        });
+        refreshFeed();
+      });
+
+      document.getElementById('navBtnConcept').addEventListener('click', () => {
+        setBottomNavActive('navBtnConcept');
+        currentCategory = 'CONCEPT';
+        document.querySelectorAll('#categoryTabs .cat-tab').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-cat') === 'CONCEPT');
+        });
+        refreshFeed();
+      });
+
+      document.getElementById('navBtnPhotos').addEventListener('click', () => {
+        setBottomNavActive('navBtnPhotos');
+        currentCategory = '사진첩';
+        document.querySelectorAll('#categoryTabs .cat-tab').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-cat') === '사진첩');
+        });
+        refreshFeed();
+      });
+
+      document.getElementById('navBtnWrite').addEventListener('click', () => {
+        openEditorModal(null);
+      });
+
+      /* ------------------------------------------------------------------------
+         10. PRIVACY, PIN LOCK & JSON BACKUP / NUKE ENGINE
+         ------------------------------------------------------------------------ */
+      async function openPrivacyModal() {
+        const posts = await getAllPostsFromDB();
+        let photoCount = 0;
+        posts.forEach(p => { photoCount += getPostImages(p).length; });
+        document.getElementById('storageStatsLabel').textContent =
+          `현재 저장된 게시물: ${posts.length}개 · 첨부된 사진: ${photoCount}장 (100% 기기 내부 보관중)`;
+        document.getElementById('pinSetupInput').value = appPrefs.pin || '';
+        document.getElementById('privacyModal').classList.add('open');
+      }
+
+      document.getElementById('navBtnPrivacy').addEventListener('click', openPrivacyModal);
+      document.getElementById('islandPill').addEventListener('click', openPrivacyModal);
+
+      document.getElementById('btnClosePrivacy').addEventListener('click', () => {
+        document.getElementById('privacyModal').classList.remove('open');
+      });
+
+      // PIN Setup
+      document.getElementById('btnSavePin').addEventListener('click', () => {
+        const val = document.getElementById('pinSetupInput').value.trim();
+        if (!/^\d{4}$/.test(val)) {
+          showToast('PIN 번호는 숫자 4자리로 입력해주세요.');
+          return;
+        }
+        appPrefs.pin = val;
+        savePrefs(appPrefs);
+        document.getElementById('islandStatusText').textContent = 'PIN LOCKED';
+        showToast('🔒 4자리 비밀 PIN 잠금이 설정되었습니다.');
+      });
+
+      document.getElementById('btnClearPin').addEventListener('click', () => {
+        appPrefs.pin = '';
+        savePrefs(appPrefs);
+        document.getElementById('pinSetupInput').value = '';
+        document.getElementById('islandStatusText').textContent = 'LOCAL ONLY';
+        showToast('🔓 PIN 잠금이 해제되었습니다.');
+      });
+
+      // Export JSON Backup
+      document.getElementById('btnExportBackup').addEventListener('click', async () => {
+        const posts = await getAllPostsFromDB();
+        const payload = {
+          app: 'SecretBlindGalleryDiary',
+          exportedAt: new Date().toISOString(),
+          posts
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `my_secret_diary_backup_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('📥 백업 파일(.json) 다운로드가 시작되었습니다.');
+      });
+
+      // Import JSON Backup
+      document.getElementById('btnImportBackup').addEventListener('click', () => {
+        document.getElementById('hiddenBackupInput').click();
+      });
+
+      document.getElementById('hiddenBackupInput').addEventListener('change', function (e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async function (ev) {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            const importedPosts = Array.isArray(parsed.posts) ? parsed.posts : [];
+            for (const post of importedPosts) {
+              if (post && post.id) await savePostToDB(post);
+            }
+            showToast(`📤 게시물 ${importedPosts.length}개를 성공적으로 복원했습니다!`);
+            openPrivacyModal();
+            refreshFeed();
+          } catch (err) {
+            showToast('올바른 백업 JSON 파일이 아닙니다.');
+          }
+        };
+        reader.readAsText(file);
+        this.value = '';
+      });
+
+      // Nuke All Data
+      document.getElementById('btnNukeAllData').addEventListener('click', () => {
+        openConfirmDialog(
+          '⚠️ 모든 데이터 영구 파기',
+          '저장된 모든 게시물, 사진, 댓글을 기기에서 완전히 삭제하시겠습니까? 이 작업은 절대 되돌릴 수 없습니다.',
+          async () => {
+            await clearAllPostsInDB();
+            document.getElementById('privacyModal').classList.remove('open');
+            showToast('💣 모든 데이터가 흔적 없이 영구 파기되었습니다.');
+            refreshFeed();
+          }
+        );
+      });
+
+      /* ------------------------------------------------------------------------
+         11. PIN LOCK SCREEN KEYPAD LOGIC
+         ------------------------------------------------------------------------ */
+      let enteredPin = '';
+      function updatePinDots() {
+        const dots = document.querySelectorAll('#pinDotsContainer .pin-dot');
+        dots.forEach((dot, idx) => {
+          dot.classList.toggle('filled', idx < enteredPin.length);
+        });
+      }
+
+      document.getElementById('pinKeypad').addEventListener('click', function (e) {
+        const key = e.target.closest('[data-digit]');
+        if (!key) return;
+        const digit = key.getAttribute('data-digit');
+        if (digit === 'CLR') {
+          enteredPin = '';
+          updatePinDots();
+          return;
+        }
+        if (digit === 'DEL') {
+          enteredPin = enteredPin.slice(0, -1);
+          updatePinDots();
+          return;
+        }
+        if (enteredPin.length < 4) {
+          enteredPin += digit;
+          updatePinDots();
+          if (enteredPin.length === 4) {
+            if (enteredPin === appPrefs.pin) {
+              setTimeout(() => {
+                document.getElementById('pinLockScreen').classList.remove('open');
+                enteredPin = '';
+                updatePinDots();
+              }, 120);
+            } else {
+              document.getElementById('pinPromptSub').textContent = '❌ 암호가 일치하지 않습니다. 다시 시도하세요.';
+              setTimeout(() => {
+                enteredPin = '';
+                updatePinDots();
+              }, 350);
+            }
+          }
+        }
+      });
+
+      /* ------------------------------------------------------------------------
+         12. INITIALIZE APP ON LOAD
+         ------------------------------------------------------------------------ */
+      async function initApp() {
+        applyTheme(appPrefs.theme || 'dark');
+        viewMode = appPrefs.viewMode || 'insta';
+        updateViewModeUI();
+
+        if (appPrefs.pin && /^\d{4}$/.test(appPrefs.pin)) {
+          document.getElementById('islandStatusText').textContent = 'PIN LOCKED';
+          document.getElementById('pinLockScreen').classList.add('open');
+        }
+
+        await seedInitialPostsIfEmpty();
+        await refreshFeed();
+      }
+
+      window.addEventListener('DOMContentLoaded', initApp);
+    })();
+  </script>
+</body>
+</html>

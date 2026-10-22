@@ -9,7 +9,7 @@
   <title>19 GALLERY · Secret Archive</title>
   <style>
     :root {
-      --safe-top: max(56px, env(safe-area-inset-top, 56px));
+      --safe-top: max(64px, env(safe-area-inset-top, 64px));
       --safe-bottom: max(24px, env(safe-area-inset-bottom, 24px));
       --app-width: 393px;
       --bg-body: #eceef2;
@@ -84,7 +84,7 @@
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      padding-top: 11px;
+      padding-top: 12px;
       z-index: 100;
       border-bottom: 1px solid var(--border-subtle);
     }
@@ -675,18 +675,24 @@
     }
 
     .blocks-container {
-      padding: 16px 18px;
+      margin: 8px 16px 24px;
+      padding: 12px 14px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-    }
-
-    .editor-block-card {
+      gap: 8px;
       background: var(--bg-surface);
       border: 1px solid var(--border-color);
       border-radius: 14px;
-      overflow: hidden;
       box-shadow: var(--shadow-card);
+      min-height: 220px;
+    }
+
+    .editor-block-card {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      overflow: visible;
+      box-shadow: none;
     }
 
     .block-card-bar {
@@ -735,12 +741,14 @@
       display: block;
     }
 
-    .editor-block-card { border-radius: 8px; box-shadow: none; }
     .editor-block-card[draggable="true"] { cursor: grab; }
     .editor-block-card[draggable="true"]:active { cursor: grabbing; }
-    .blocks-container { gap: 8px; padding: 12px 16px 24px; }
-    .block-textarea { min-height: 72px; background: transparent; }
-    .block-photo-preview { max-height: 520px; object-fit: contain; }
+    .blocks-container { gap: 8px; }
+    .editor-block-card .block-card-bar { padding: 5px 0; background: transparent; border-bottom: 0; }
+    .block-textarea { min-height: 72px; background: transparent; padding: 10px 2px; }
+    .block-photo-preview { max-height: 520px; object-fit: contain; border-radius: 8px; }
+    .editor-block-card:has(.block-photo-preview) { padding: 4px 0 10px; border-bottom: 1px solid var(--border-subtle); }
+    .editor-block-card:has(.block-textarea) { padding: 2px 0; }
     .crop-controls { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
     .crop-controls label { display:flex; align-items:center; gap:10px; font-size:13px; }
     .crop-controls input { flex:1; min-width:0; }
@@ -1118,14 +1126,15 @@
         <!-- Private Memo Comments -->
         <section class="comments-section">
           <div class="comments-header">
-            <span>메모 및 덧글 <strong id="detailCommentCount" style="color:var(--accent-primary);">0</strong></span>
+            <span>댓글 <strong id="detailCommentCount" style="color:var(--accent-primary);">0</strong></span>
           </div>
 
           <div class="comment-list" id="detailCommentList"></div>
 
           <div class="comment-compose-box">
+            <input type="text" id="commentNicknameInput" class="editor-input" style="margin-bottom:8px;font-size:13px;" value="나" maxlength="40" placeholder="댓글 작성자 이름" aria-label="댓글 작성자 이름" />
             <div style="display:flex;gap:8px;">
-              <textarea id="commentTextInput" class="editor-input" style="height:54px;resize:none;font-family:inherit;" placeholder="남겨둘 메모를 적어보세요..."></textarea>
+              <textarea id="commentTextInput" class="editor-input" style="height:72px;resize:vertical;font-family:inherit;" placeholder="댓글을 입력하세요..."></textarea>
               <button type="button" class="dock-btn primary" id="btnSubmitComment" style="flex:0 0 68px;height:54px;">등록</button>
             </div>
           </div>
@@ -1152,7 +1161,7 @@
           <input type="text" id="editorNicknameInput" class="editor-input" style="font-size:13px;" value="나" placeholder="작성자 표기 (예: 나, Secret)" />
         </div>
 
-        <div class="editor-toolbar-hint">글과 사진을 추가한 뒤 ▲ ▼ 버튼으로 순서를 자유롭게 바꿀 수 있어요.</div>
+        <div class="editor-toolbar-hint">한 공간 안에 글과 사진을 함께 배치하세요. 사진과 글은 추가 후 순서를 바꿀 수 있어요.</div>
         <div class="blocks-container" id="editorBlocksContainer"></div>
       </div>
 
@@ -1161,7 +1170,7 @@
       <!-- Bottom Controls -->
       <div class="bottom-action-dock">
         <button type="button" class="dock-btn danger" id="btnCancelEditor">취소</button>
-        <button type="button" class="dock-btn" id="btnAddTextBlock">+ 글블록</button>
+        <button type="button" class="dock-btn" id="btnAddTextBlock">+ 글 추가</button>
         <button type="button" class="dock-btn secondary-accent" id="btnAddPhotoBlock">📷 사진추가</button>
         <button type="button" class="dock-btn primary" id="btnSavePost">완료</button>
       </div>
@@ -1577,7 +1586,7 @@
                     <span>${formatRelativeTime(post.createdAt)}</span>
                     <span>·</span>
                     <span>좋아요 ${post.likes || 0}</span>
-                    ${commentCount > 0 ? `<span>· 메모 ${commentCount}</span>` : ''}
+                    ${commentCount > 0 ? `<span>· 댓글 ${commentCount}</span>` : ''}
                   </div>
                 </div>
                 ${images.length > 0 ? `<img class="compact-thumb" src="${images[0].content}" alt="썸네일" />` : ''}
@@ -1639,7 +1648,7 @@
                     ❤️ <span>${post.likes || 0}</span>
                   </button>
                   <button type="button" class="react-btn" data-open-id="${post.id}">
-                    💬 메모 <span>${commentCount}</span>
+                    💬 댓글 <span>${commentCount}</span>
                   </button>
                 </div>
               </div>
@@ -1779,14 +1788,14 @@
         const listEl = document.getElementById('detailCommentList');
 
         if (comments.length === 0) {
-          listEl.innerHTML = `<div style="text-align:center;padding:16px;font-size:12.5px;color:var(--text-muted);">남겨진 메모가 없습니다.</div>`;
+          listEl.innerHTML = `<div style="text-align:center;padding:16px;font-size:12.5px;color:var(--text-muted);">등록된 댓글이 없습니다.</div>`;
           return;
         }
 
         listEl.innerHTML = comments.map(c => `
           <div class="comment-item">
             <div class="comment-top">
-              <span class="comment-nick">${escapeHtml(c.nickname || '메모')}</span>
+              <span class="comment-nick">${escapeHtml(c.nickname || '익명')}</span>
               <button type="button" data-del-comment="${c.id}" style="background:none;border:none;color:#f87171;font-weight:700;cursor:pointer;font-size:11px;">삭제</button>
             </div>
             <div class="comment-body">${escapeHtml(c.content)}</div>
@@ -1815,7 +1824,7 @@
         if (!Array.isArray(post.comments)) post.comments = [];
         post.comments.push({
           id: 'cmt_' + Date.now(),
-          nickname: '나',
+          nickname: document.getElementById('commentNicknameInput').value.trim() || '나',
           content: text,
           createdAt: Date.now()
         });
